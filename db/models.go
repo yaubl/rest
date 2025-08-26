@@ -10,15 +10,15 @@ import (
 )
 
 type Bot struct {
-	ID          int64
-	Author      int64
+	ID          string
+	Author      string
 	Name        string
 	Description sql.NullString
 	CreatedAt   time.Time
 }
 
 type User struct {
-	ID        int64
+	ID        string
 	Username  string
 	CreatedAt time.Time
 }

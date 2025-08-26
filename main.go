@@ -4,19 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"log"
 
 	"api/db"
 	"api/middlewares"
-	"api/routes/v0"
+	"api/routes"
+
 	_ "embed"
+
 	_ "github.com/glebarez/go-sqlite"
 
 	"github.com/gin-gonic/gin"
 )
 
-func setup() *gin.Engine {
+func setup(ctx *middlewares.AppContext) *gin.Engine {
 	router := gin.Default()
+	router.Use(middlewares.WithAppContext(ctx))
+
+	// setup actual routers idk.
+	routes.RegisterRoutes(router)
 
 	return router
 }
@@ -39,18 +46,14 @@ func main() {
 	}
 
 	if _, err := database.ExecContext(ctx, ddl); err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 
 	appCtx := &middlewares.AppContext{
 		DB:      db.New(database),
 		Context: ctx,
 	}
-	router := setup()
-	router.Use(middlewares.WithAppContext(appCtx))
 
-	// setup actual routers idk.
-	v0.SetupRouter(router)
-
+	router := setup(appCtx)
 	router.Run(port)
 }

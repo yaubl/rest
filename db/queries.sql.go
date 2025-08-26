@@ -10,6 +10,30 @@ import (
 	"database/sql"
 )
 
+const countBotsByUserID = `-- name: CountBotsByUserID :one
+SELECT COUNT(*) AS count
+FROM bots
+WHERE author = ?
+`
+
+func (q *Queries) CountBotsByUserID(ctx context.Context, author string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countBotsByUserID, author)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) AS count FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createBot = `-- name: CreateBot :one
 INSERT INTO bots (author, name, description)
 VALUES (?, ?, ?)
@@ -17,7 +41,7 @@ RETURNING id, author, name, description, created_at
 `
 
 type CreateBotParams struct {
-	Author      int64
+	Author      string
 	Name        string
 	Description sql.NullString
 }
@@ -36,16 +60,41 @@ func (q *Queries) CreateBot(ctx context.Context, arg CreateBotParams) (Bot, erro
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username)
-VALUES (?)
+INSERT INTO users (id, username)
+VALUES (?, ?)
 RETURNING id, username, created_at
 `
 
-func (q *Queries) CreateUser(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, username)
+type CreateUserParams struct {
+	ID       string
+	Username string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.ID, arg.Username)
 	var i User
 	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
 	return i, err
+}
+
+const deleteBot = `-- name: DeleteBot :exec
+DELETE FROM bots
+WHERE id = ?
+`
+
+func (q *Queries) DeleteBot(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteBot, id)
+	return err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE id = ?
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteUser, id)
+	return err
 }
 
 const getBotByID = `-- name: GetBotByID :one
@@ -53,7 +102,7 @@ SELECT id, author, name, description, created_at FROM bots
 WHERE id = ?
 `
 
-func (q *Queries) GetBotByID(ctx context.Context, id int64) (Bot, error) {
+func (q *Queries) GetBotByID(ctx context.Context, id string) (Bot, error) {
 	row := q.db.QueryRowContext(ctx, getBotByID, id)
 	var i Bot
 	err := row.Scan(
@@ -71,20 +120,8 @@ SELECT id, username, created_at FROM users
 WHERE id = ?
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, id)
-	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
-	return i, err
-}
-
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, created_at FROM users
-WHERE username = ?
-`
-
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
 	var i User
 	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
 	return i, err
@@ -96,7 +133,7 @@ WHERE author = ?
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListBotsByUserID(ctx context.Context, author int64) ([]Bot, error) {
+func (q *Queries) ListBotsByUserID(ctx context.Context, author string) ([]Bot, error) {
 	rows, err := q.db.QueryContext(ctx, listBotsByUserID, author)
 	if err != nil {
 		return nil, err
@@ -151,4 +188,84 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const searchBotsByName = `-- name: SearchBotsByName :many
+SELECT id, author, name, description, created_at FROM bots
+WHERE LOWER(name) LIKE LOWER('%' || ? || '%')
+ORDER BY created_at DESC
+`
+
+func (q *Queries) SearchBotsByName(ctx context.Context, dollar_1 sql.NullString) ([]Bot, error) {
+	rows, err := q.db.QueryContext(ctx, searchBotsByName, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Bot
+	for rows.Next() {
+		var i Bot
+		if err := rows.Scan(
+			&i.ID,
+			&i.Author,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateBot = `-- name: UpdateBot :one
+UPDATE bots
+SET name = ?, description = ?
+WHERE id = ?
+RETURNING id, author, name, description, created_at
+`
+
+type UpdateBotParams struct {
+	Name        string
+	Description sql.NullString
+	ID          string
+}
+
+func (q *Queries) UpdateBot(ctx context.Context, arg UpdateBotParams) (Bot, error) {
+	row := q.db.QueryRowContext(ctx, updateBot, arg.Name, arg.Description, arg.ID)
+	var i Bot
+	err := row.Scan(
+		&i.ID,
+		&i.Author,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = ?
+WHERE id = ?
+RETURNING id, username, created_at
+`
+
+type UpdateUserParams struct {
+	Username string
+	ID       string
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUser, arg.Username, arg.ID)
+	var i User
+	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
+	return i, err
 }

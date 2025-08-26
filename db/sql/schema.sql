@@ -1,14 +1,14 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE users (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          TEXT PRIMARY KEY,
     username    TEXT NOT NULL UNIQUE,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE bots (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    author     	INTEGER NOT NULL,
+    id          TEXT PRIMARY KEY,
+    author     	TEXT NOT NULL,
     name        TEXT NOT NULL,
     description TEXT,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

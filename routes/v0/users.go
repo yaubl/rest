@@ -1,42 +1,15 @@
 package v0
 
 import (
-	"api/middlewares"
-	"net/http"
+	"api/services"
 
 	"github.com/gin-gonic/gin"
 )
 
-type CreateUserInput struct {
-	Username string `json:"username" binding:"required"`
-}
+func RegisterUsersRoutes(router *gin.RouterGroup) {
+	users := router.Group("/users")
 
-func getUsers(c *gin.Context) {
-	ctx := middlewares.GetAppContext(c)
-
-	users, err := ctx.DB.ListUsers(ctx.Context)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
-}
-
-func createUser(c *gin.Context) {
-	var input CreateUserInput
-	ctx := middlewares.GetAppContext(c)
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	user, err := ctx.DB.CreateUser(ctx.Context, input.Username)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, user)
+	users.GET("/:id", services.GetUser)
+	users.GET("/", services.GetUsers)
+	users.POST("/", services.CreateUser)
 }
