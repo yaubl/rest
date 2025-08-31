@@ -5,20 +5,20 @@
 package db
 
 import (
-	"database/sql"
 	"time"
 )
 
 type Bot struct {
-	ID          string
-	Author      string
-	Name        string
-	Description sql.NullString
-	CreatedAt   time.Time
+	ID          string    `json:"id"`
+	Author      string    `json:"author"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type User struct {
-	ID        string
-	Username  string
-	CreatedAt time.Time
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
 }

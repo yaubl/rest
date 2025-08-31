@@ -1,14 +1,17 @@
 package services
 
 import (
+	"api/config"
+	"api/db"
+	"api/middlewares"
+	"api/pkg/jwt"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 type DiscordUser struct {
@@ -17,40 +20,39 @@ type DiscordUser struct {
 	Avatar   string `json:"avatar"`
 }
 
-var (
-	clientID     = os.Getenv("DISCORD_CLIENT_ID")
-	clientSecret = os.Getenv("DISCORD_CLIENT_SECRET")
-	redirectURI  = os.Getenv("DISCORD_REDIRECT_URI")
-)
-
-func GetDiscordOAuthURL(state string) string {
+func AuthLogin(c *gin.Context) {
 	params := url.Values{}
-	params.Add("client_id", clientID)
-	params.Add("redirect_uri", redirectURI)
+	params.Add("client_id", config.ClientID)
+	params.Add("redirect_uri", config.RedirectURI)
 	params.Add("response_type", "code")
 	params.Add("scope", "identify")
-	params.Add("state", state)
 
-	return fmt.Sprintf("https://discord.com/api/oauth2/authorize?%s", params.Encode())
+	c.Redirect(http.StatusFound, "https://discord.com/api/oauth2/authorize?"+params.Encode())
 }
 
-func Exchange(code string) (*DiscordUser, error) {
+// note for myself: this works :D
+func AuthCallback(c *gin.Context) {
+	ctx := middlewares.GetAppContext(c)
+	code := c.Query("code")
+	if code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing code"})
+		return
+	}
+
 	data := url.Values{}
-	data.Set("client_id", clientID)
-	data.Set("client_secret", clientSecret)
+	data.Set("client_id", config.ClientID)
+	data.Set("client_secret", config.ClientSecret)
 	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
-	data.Set("redirect_uri", redirectURI)
+	data.Set("redirect_uri", config.RedirectURI)
 
-	req, err := http.NewRequest("POST", "https://discord.com/api/oauth2/token", strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
+	req, _ := http.NewRequest("POST", "https://discord.com/api/oauth2/token", strings.NewReader(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+	if err != nil || resp.StatusCode != 200 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token exchange failed"})
+		return
 	}
 	defer resp.Body.Close()
 
@@ -58,28 +60,40 @@ func Exchange(code string) (*DiscordUser, error) {
 		AccessToken string `json:"access_token"`
 		TokenType   string `json:"token_type"`
 	}
-
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
-		return nil, err
-	}
-	if tokenResp.AccessToken == "" {
-		return nil, errors.New("no access token received")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "decode token failed"})
+		return
 	}
 
-	userReq, _ := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
-	userReq.Header.Set("Authorization", tokenResp.TokenType+" "+tokenResp.AccessToken)
+	reqUser, _ := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+	reqUser.Header.Set("Authorization", fmt.Sprintf("%s %s", tokenResp.TokenType, tokenResp.AccessToken))
 
-	userResp, err := http.DefaultClient.Do(userReq)
-	if err != nil {
-		return nil, err
+	respUser, err := http.DefaultClient.Do(reqUser)
+	if err != nil || respUser.StatusCode != 200 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "fetch user failed"})
+		return
 	}
-	defer userResp.Body.Close()
+	defer respUser.Body.Close()
 
-	body, _ := io.ReadAll(userResp.Body)
 	var user DiscordUser
-	if err := json.Unmarshal(body, &user); err != nil {
-		return nil, err
+	if err := json.NewDecoder(respUser.Body).Decode(&user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "decode user failed"})
+		return
 	}
 
-	return &user, nil
+	signed, err := jwt.GenerateJWT(user.ID, user.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to sign JWT"})
+		return
+	}
+
+	dbUser, err := ctx.DB.CreateUser(ctx.Context, db.CreateUserParams{ID: user.ID, Username: user.Username})
+	if err != nil {
+		dbUser, _ = ctx.DB.UpdateUsername(ctx.Context, db.UpdateUsernameParams{ID: user.ID, Username: user.Username})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"token": signed,
+		"user":  dbUser,
+	})
 }
