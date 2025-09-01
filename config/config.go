@@ -3,6 +3,7 @@ package config
 import "os"
 
 var (
+	Mode         = os.Getenv("MODE")
 	ClientID     = os.Getenv("DISCORD_CLIENT_ID")
 	ClientSecret = os.Getenv("DISCORD_CLIENT_SECRET")
 	RedirectURI  = os.Getenv("DISCORD_REDIRECT_URI")

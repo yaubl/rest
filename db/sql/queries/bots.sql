@@ -3,7 +3,7 @@ INSERT INTO bots (id, author, name, description)
 VALUES (?1, ?2, ?3, ?4)
 RETURNING *;
 
--- name: GetBotByID :one
+-- name: GetBot :one
 SELECT * FROM bots
 WHERE id = ?1;
 

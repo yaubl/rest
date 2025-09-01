@@ -4,6 +4,8 @@ import (
 	"strconv"
 )
 
+// simple utility to check if a string
+// is a valid discord snowflake.
 func IsSnowflake(s string) bool {
 	if s == "" {
 		return false

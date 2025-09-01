@@ -51,13 +51,13 @@ func (q *Queries) DeleteBot(ctx context.Context, id string) error {
 	return err
 }
 
-const getBotByID = `-- name: GetBotByID :one
+const getBot = `-- name: GetBot :one
 SELECT id, author, name, description, status, created_at FROM bots
 WHERE id = ?1
 `
 
-func (q *Queries) GetBotByID(ctx context.Context, id string) (Bot, error) {
-	row := q.db.QueryRowContext(ctx, getBotByID, id)
+func (q *Queries) GetBot(ctx context.Context, id string) (Bot, error) {
+	row := q.db.QueryRowContext(ctx, getBot, id)
 	var i Bot
 	err := row.Scan(
 		&i.ID,
@@ -87,7 +87,7 @@ func (q *Queries) ListBots(ctx context.Context, arg ListBotsParams) ([]Bot, erro
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Bot
+	items := []Bot{}
 	for rows.Next() {
 		var i Bot
 		if err := rows.Scan(
@@ -130,7 +130,7 @@ func (q *Queries) ListBotsByAuthor(ctx context.Context, arg ListBotsByAuthorPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Bot
+	items := []Bot{}
 	for rows.Next() {
 		var i Bot
 		if err := rows.Scan(
@@ -173,7 +173,7 @@ func (q *Queries) ListBotsByStatus(ctx context.Context, arg ListBotsByStatusPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Bot
+	items := []Bot{}
 	for rows.Next() {
 		var i Bot
 		if err := rows.Scan(
