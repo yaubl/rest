@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bls/api/modules/admin"
 	"bls/api/modules/auth"
 	"bls/api/modules/bots"
 	"bls/api/modules/users"
@@ -11,6 +12,7 @@ import (
 func NewRouter() *httprouter.Router {
 	router := httprouter.New()
 
+	admin.RegisterRoutes(router, queries)
 	bots.RegisterRoutes(router, queries)
 	users.RegisterRoutes(router, queries)
 	auth.RegisterRoutes(router, queries)

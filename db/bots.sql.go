@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createBot = `-- name: CreateBot :one
@@ -199,26 +200,27 @@ func (q *Queries) ListBotsByStatus(ctx context.Context, arg ListBotsByStatusPara
 
 const updateBot = `-- name: UpdateBot :one
 UPDATE bots
-SET name = ?2,
-    description = ?3,
-    status = ?4
-WHERE id = ?1
+SET
+    name        = COALESCE(?1, name),
+    description = COALESCE(?2, description),
+    status      = COALESCE(?3, status)
+WHERE id = ?4
 RETURNING id, author, name, description, status, created_at
 `
 
 type UpdateBotParams struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
+	Name        sql.NullString `json:"name"`
+	Description sql.NullString `json:"description"`
+	Status      sql.NullString `json:"status"`
+	ID          string         `json:"id"`
 }
 
 func (q *Queries) UpdateBot(ctx context.Context, arg UpdateBotParams) (Bot, error) {
 	row := q.db.QueryRowContext(ctx, updateBot,
-		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.Status,
+		arg.ID,
 	)
 	var i Bot
 	err := row.Scan(

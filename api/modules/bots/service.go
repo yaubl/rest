@@ -14,7 +14,7 @@ func NewService(q *db.Queries) *Service {
 }
 
 func (s *Service) GetAll(ctx context.Context, limit, offset int64) ([]db.Bot, error) {
-	return s.q.ListBots(ctx, db.ListBotsParams{Limit: limit, Offset: offset})
+	return s.q.ListBotsByStatus(ctx, db.ListBotsByStatusParams{Limit: limit, Offset: offset, Status: "approved"})
 }
 
 func (s *Service) GetOne(ctx context.Context, id string) (db.Bot, error) {

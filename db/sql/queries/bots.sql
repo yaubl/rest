@@ -26,10 +26,11 @@ LIMIT ?2 OFFSET ?3;
 
 -- name: UpdateBot :one
 UPDATE bots
-SET name = ?2,
-    description = ?3,
-    status = ?4
-WHERE id = ?1
+SET
+    name        = COALESCE(sqlc.narg('name'), name),
+    description = COALESCE(sqlc.narg('description'), description),
+    status      = COALESCE(sqlc.narg('status'), status)
+WHERE id = sqlc.arg('id')
 RETURNING *;
 
 -- name: DeleteBot :exec
