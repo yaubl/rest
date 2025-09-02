@@ -25,11 +25,11 @@ func (s *Service) GetAll(ctx context.Context, limit, offset int64) ([]db.User, e
 func (s *Service) GetOne(ctx context.Context, id string) (db.User, error) {
 	if user, cached := s.c.Get(id); cached {
 		return user, nil
-	} else {
-		user, err := s.q.GetUser(ctx, id)
-		if err == nil {
-			s.c.Set(id, user, time.Hour*2)
-		}
-		return user, err
 	}
+
+	user, err := s.q.GetUser(ctx, id)
+	if err == nil {
+		s.c.Set(id, user, time.Hour*2)
+	}
+	return user, err
 }

@@ -23,17 +23,15 @@ func (s *Service) GetAll(ctx context.Context, limit, offset int64) ([]db.Bot, er
 }
 
 func (s *Service) GetOne(ctx context.Context, id string) (db.Bot, error) {
-	bot, cached := s.c.Get(id)
-
-	if cached {
+	if bot, cached := s.c.Get(id); cached {
 		return bot, nil
-	} else {
-		bot, err := s.q.GetBot(ctx, id)
-		if err == nil {
-			s.c.Set(id, bot, time.Hour)
-		}
-		return bot, err
 	}
+
+	bot, err := s.q.GetBot(ctx, id)
+	if err == nil {
+		s.c.Set(id, bot, time.Hour)
+	}
+	return bot, err
 }
 
 func (s *Service) Create(ctx context.Context, dto db.CreateBotParams) (db.Bot, error) {

@@ -1,6 +1,7 @@
 package response
 
 import (
+	// ignore this visual error.
 	"encoding/json/v2"
 	"net/http"
 )
