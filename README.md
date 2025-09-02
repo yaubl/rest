@@ -11,6 +11,8 @@ simple botlist rest api made in go.
 * [ ] webhooks (posting)
 * [ ] finish crud
 * [ ] doc funcs
+* [x] jsonv2
+* [ ] cache (PARTIALLY IMPLEMENTED)
 
 # license
 

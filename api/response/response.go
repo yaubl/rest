@@ -1,7 +1,7 @@
 package response
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"net/http"
 )
 
@@ -13,6 +13,6 @@ func Json(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if v != nil {
-		_ = json.NewEncoder(w).Encode(v)
+		_ = json.MarshalWrite(w, v, nil)
 	}
 }

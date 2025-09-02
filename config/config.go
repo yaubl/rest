@@ -10,3 +10,7 @@ var (
 	Reviewers    = os.Getenv("BOT_REVIEWERS")
 	JwtSecret    = []byte(os.Getenv("JWT_SECRET"))
 )
+
+func init() {
+	os.Setenv("GOEXPERIMENT", "jsonv2")
+}

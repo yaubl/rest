@@ -3,6 +3,7 @@ module bls
 go 1.25.0
 
 require (
+	github.com/elisiei/gache v0.0.0-20250831152214-541848ee0999
 	github.com/elisiei/zlog v0.0.0-20250831174743-cf7920818609
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/julienschmidt/httprouter v1.3.0
